@@ -1,0 +1,93 @@
+name: CI/CD pipeline — build & promote
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Target stage to deploy: staging, preprod, production'
+        required: true
+        default: 'staging'
+
+jobs:
+  deploy-development:
+    name: Build and deploy to Development (auto on push)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Login to Heroku Container Registry
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+
+      - name: Build Docker image for Development
+        run: |
+          docker build -t registry.heroku.com/${{ secrets.HEROKU_APP_DEV }}/web .
+
+      - name: Push image to Heroku Development registry
+        run: |
+          docker push registry.heroku.com/${{ secrets.HEROKU_APP_DEV }}/web
+
+      - name: Release image to Development
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP_DEV: ${{ secrets.HEROKU_APP_DEV }}
+        run: |
+          heroku container:release web --app "$HEROKU_APP_DEV"
+
+  promote-stage:
+    name: Promote to a higher stage (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      HEROKU_APP_DEV: ${{ secrets.HEROKU_APP_DEV }}
+      HEROKU_APP_STAGING: ${{ secrets.HEROKU_APP_STAGING }}
+      HEROKU_APP_PREPROD: ${{ secrets.HEROKU_APP_PREPROD }}
+      HEROKU_APP_PROD: ${{ secrets.HEROKU_APP_PROD }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Login to Heroku Container Registry
+        run: |
+          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+
+      - name: Determine target app and deploy
+        run: |
+          STAGE="${{ github.event.inputs.stage }}"
+          echo "Requested stage: $STAGE"
+          if [ "$STAGE" = "staging" ]; then
+            APP_NAME="$HEROKU_APP_STAGING"
+          elif [ "$STAGE" = "preprod" ]; then
+            APP_NAME="$HEROKU_APP_PREPROD"
+          elif [ "$STAGE" = "production" ] || [ "$STAGE" = "prod" ]; then
+            APP_NAME="$HEROKU_APP_PROD"
+          else
+            echo "Unknown stage: $STAGE"; exit 1
+          fi
+
+          echo "Deploying to Heroku app: $APP_NAME"
+          docker build -t registry.heroku.com/$APP_NAME/web .
+          docker push registry.heroku.com/$APP_NAME/web
+          heroku container:release web --app "$APP_NAME"
+

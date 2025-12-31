@@ -1,4 +1,4 @@
-ML Project — End-to-end implementation
+ML Project — End-to-end implementation `Development` to `staging` to `preprod` to `production`
 =====================================
 
 This repository demonstrates a small end-to-end machine learning project using the California Housing dataset. It contains the training notebook, saved model artifacts, a minimal Flask app for serving predictions, and simple deployment wiring.
@@ -138,14 +138,8 @@ Open `app.ipynb` and run the cells in order. The notebook:
 4. Trains a `LinearRegression` model.
 5. Saves the fitted `scaler` and `model` with `pickle.dump` (see final cell).
 
-If you want a single saved pipeline artifact instead, change the notebook to fit a `Pipeline` and save it with `joblib.dump(pipeline, 'pipeline.pkl')`.
 
-Contact / Next steps
---------------------
-If you want, I can:
-- Update the notebook to save a single pipeline file and patch `main.py` to load it.
-- Add automated tests that exercise `/predict` with example payloads.
-- Create a small Dockerfile and a `Procfile`-ready configuration for deploying to Heroku/Render.
+
 
 License
 -------
