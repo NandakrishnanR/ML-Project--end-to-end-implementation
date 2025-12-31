@@ -111,23 +111,8 @@ Why use a Procfile?
 - Local development often uses Flask’s built-in server (`python main.py`) which is convenient but not suitable for production. A Procfile lets the PaaS know how to start the app with a production server.
 - Including a `Procfile` makes deploying to Heroku (or similar) simple: the platform reads the file and runs the declared command on each dyno/container.
 
-Deployment notes
-----------------
-- For production, prefer `gunicorn` or `uvicorn` behind a reverse proxy. Example: `gunicorn --workers 3 --bind 0.0.0.0:$PORT main:app`.
-- Ensure your production environment has the same Python and package versions (use `requirements.txt` and pin versions).
-- Do not run `debug=True` in production — it enables an interactive debugger and exposes code execution.
 
-Troubleshooting & common issues
--------------------------------
-- 403 Forbidden in Postman but curl works: check Postman proxy/interceptor settings, remove extra headers, and ensure you use `http://127.0.0.1:5000` (some proxies treat `localhost` differently).
-- 500 errors when POSTing JSON: confirm the body shape matches what the server expects (`data` key or direct feature dict), and that `scaler.pkl` and `regmodel.pkl` are present.
-- Pickle load errors: confirm you are using compatible Python and scikit-learn versions when saving/loading pickles. Prefer `joblib` for sklearn artifacts.
 
-Security and best practices
----------------------------
-- Never unpickle data from untrusted sources — unpickling executes code contained in the pickle.
-- Lock dependency versions and reproduce the runtime (use the same Python minor version where possible).
-- Add input validation and rate limiting in production to prevent abuse.
 
 Reproducing training
 ---------------------
